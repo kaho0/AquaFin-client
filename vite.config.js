@@ -1,5 +1,11 @@
 import { defineConfig } from "vite";
-import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+
 export default defineConfig({
-  plugins: [tailwindcss()],
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      external: ["firebase/app"], // Ensure Firebase is not bundled incorrectly
+    },
+  },
 });
