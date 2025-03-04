@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "./components/firebase.js";
 import { toast } from "react-toastify";
 import { Link, useNavigate } from "react-router-dom";
-import SignInwithGoogle from "./components/SignInwithGoogle.jsx";
+import SignInWithGoogle from "./components/SignInWithGoogle.jsx";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -60,9 +60,9 @@ const Login = () => {
           <FcGoogle size={24} style={{ marginRight: "10px" }} /> Sign in with
           Google
         </button> */}
-        <SignInwithGoogle></SignInwithGoogle>
+        <SignInWithGoogle></SignInWithGoogle>
         <p style={linkTextStyle}>
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link to="/register" style={linkStyle}>
             Sign Up
           </Link>
