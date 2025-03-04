@@ -3,7 +3,8 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "./components/firebase.js";
 import { toast } from "react-toastify";
 import { Link, useNavigate } from "react-router-dom";
-import SignInwithGoogle from "./components/signInwithGoogle.jsx;
+import SignInwithGoogle from "./components/signInwithGoogle.jsx";
+
 
 
 const Login = () => {
