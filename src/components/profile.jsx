@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { auth, db } from "./firebase";
-import { doc, getDoc, updateDoc, collection, addDoc } from "firebase/firestore";
+import { auth } from "./firebase";
 import Swal from "sweetalert2";
 import NavBar from "../pages/NavBar";
 import { useNavigate } from "react-router-dom";
+import { FiZap, FiPackage, FiHome, FiShoppingCart } from "react-icons/fi";
 
-function AquariumCart() {
+function Profile({ user }) {
   const [userDetails, setUserDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cartItems, setCartItems] = useState([]);
@@ -16,62 +16,71 @@ function AquariumCart() {
   const [addressDetails, setAddressDetails] = useState({
     street: "",
     city: "",
-    state: "",
     zipCode: "",
     country: "",
+    phone: "",
   });
   const navigate = useNavigate();
   useEffect(() => {
     let isMounted = true;
 
     const fetchUserData = async (user) => {
-      if (!user) return;
-      try {
-        const docRef = doc(db, "Users", user.uid);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists() && isMounted) {
-          const userData = docSnap.data();
-          setUserDetails({ ...userData, id: user.uid });
-          // Pre-fill address if available
-          if (userData.address) {
-            setAddressDetails({
-              street: userData.address || "",
-              city: userData.city || "",
-              state: userData.state || "",
-              zipCode: userData.zipCode || "",
-              country: userData.country || "",
-            });
-          }
-          fetchCartItems(user.uid);
-          fetchUserOrders(user.uid);
-        } else {
-          console.log("No user data found in Firestore.");
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+      if (!user) {
+        console.log("Profile: No user provided to fetchUserData");
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-    };
-
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+      
+      console.log("Profile: Setting user data for UID:", user.uid);
+      
+      // Set user details directly from Firebase Auth
       if (isMounted) {
-        setUserDetails(null);
-        fetchUserData(user);
+        setUserDetails({ 
+          email: user.email, 
+          firstName: user.displayName || user.email,
+          id: user.uid 
+        });
       }
-    });
-
-    return () => {
-      isMounted = false;
-      unsubscribe();
+      
+      // Fetch cart and orders
+      try {
+        fetchCartItems(user.uid);
+        fetchUserOrders(user.uid);
+      } catch (error) {
+        console.error("Error fetching cart/orders:", error);
+      }
+      
+      if (isMounted) {
+        setLoading(false);
+      }
     };
-  }, []);
+
+    // Use the user prop if available, otherwise listen to auth state
+    if (user) {
+      console.log("Profile: Using user prop", user.uid);
+      fetchUserData(user);
+    } else {
+      console.log("Profile: No user prop, listening to auth state");
+      const unsubscribe = auth.onAuthStateChanged((authUser) => {
+        if (isMounted) {
+          console.log("Profile: Auth state changed", authUser ? authUser.uid : "no user");
+          setUserDetails(null);
+          fetchUserData(authUser);
+        }
+      });
+
+      return () => {
+        isMounted = false;
+        unsubscribe();
+      };
+    }
+  }, [user]);
 
   // Fetch cart items
   const fetchCartItems = async (userId) => {
     try {
       const response = await fetch(
-        `https://gentle-refuge-38511-8844be05d876.herokuapp.com/api/v1/cart/${userId}`
+      `https://aquafin.onrender.com/api/v1/cart/${userId}`
       );
       if (!response.ok) throw new Error("Failed to fetch cart items");
 
@@ -86,7 +95,7 @@ function AquariumCart() {
   const fetchUserOrders = async (userId) => {
     try {
       const response = await fetch(
-        `https://gentle-refuge-38511-8844be05d876.herokuapp.com/api/v1/orders/user/${userId}`
+      `https://aquafin.onrender.com/api/v1/orders/user/${userId}`
       );
       if (!response.ok) throw new Error("Failed to fetch user orders");
 
@@ -101,7 +110,7 @@ function AquariumCart() {
   const removeItem = async (product_id, category) => {
     try {
       await fetch(
-        "https://gentle-refuge-38511-8844be05d876.herokuapp.com/api/v1/cart/remove",
+      "https://aquafin.onrender.com/api/v1/cart/remove",
         {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
@@ -137,7 +146,7 @@ function AquariumCart() {
       );
 
       const response = await fetch(
-        "https://gentle-refuge-38511-8844be05d876.herokuapp.com/api/v1/cart/update",
+      "https://aquafin.onrender.com/api/v1/cart/update",
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -160,7 +169,7 @@ function AquariumCart() {
   const clearCart = async () => {
     try {
       await fetch(
-        "https://gentle-refuge-38511-8844be05d876.herokuapp.com/api/v1/cart/clear",
+      "https://aquafin.onrender.com/api/v1/cart/clear",
         {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
@@ -268,8 +277,21 @@ function AquariumCart() {
         }
       }
 
-      // Format complete address
-      const formattedAddress = `${addressDetails.street}, ${addressDetails.city}, ${addressDetails.state} ${addressDetails.zipCode}, ${addressDetails.country}`;
+      // Validate Bangladesh phone number format
+      const phoneRegex = /^(\+880|880)?1[3-9]\d{8}$/;
+      if (!phoneRegex.test(addressDetails.phone.replace(/\s/g, ''))) {
+        Swal.fire({
+          title: "Invalid Phone Number",
+          text: "Please enter a valid Bangladesh phone number (e.g., +880 1XXXXXXXXX or 01XXXXXXXXX).",
+          icon: "warning",
+          confirmButtonText: "OK",
+          confirmButtonColor: "#0088cc",
+        });
+        return;
+      }
+
+      // Format complete address with phone number
+      const formattedAddress = `${addressDetails.street}, ${addressDetails.city}, ${addressDetails.zipCode}, ${addressDetails.country} | Phone: ${addressDetails.phone}`;
 
       // Prepare order data
       const orderData = {
@@ -290,7 +312,7 @@ function AquariumCart() {
 
       // 1. Save to SQL database via API endpoint
       const orderResponse = await fetch(
-        "https://gentle-refuge-38511-8844be05d876.herokuapp.com/api/v1/orders/create",
+      "https://aquafin.onrender.com/api/v1/orders/create",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -301,20 +323,8 @@ function AquariumCart() {
       if (!orderResponse.ok)
         throw new Error("Failed to create order in database");
 
-      // 2. Update user profile in Firestore
-      await updateDoc(doc(db, "Users", user.uid), {
-        firstName: userDetails.firstName,
-        lastName: userDetails.lastName || "",
-        phone: userDetails.phone || "",
-        address: addressDetails.street,
-        city: addressDetails.city,
-        state: addressDetails.state,
-        zipCode: addressDetails.zipCode,
-        country: addressDetails.country,
-      });
-
-      // 3. Add to Orders collection in Firestore
-      await addDoc(collection(db, "Orders"), orderData);
+      // Note: Removed Firestore operations to avoid permission issues
+      // User profile and orders are managed through the backend API
 
       // Clear cart after successful order
       await clearCart();
@@ -426,7 +436,7 @@ function AquariumCart() {
             {/* Cart Section */}
             <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition duration-300 mb-8">
               <h2 className="p-4 m-0 text-xl border-b border-blue-100 text-teal-700 text-center bg-gradient-to-r from-teal-100 to-emerald-100 md:text-2xl md:p-5 font-bold">
-                <span className="inline-block mr-2">🐠</span>
+                <img src="/loogo.png" alt="Aquarium" className="inline-block mr-2 w-8 h-8 object-contain" />
                 Your Aquarium Collection
               </h2>
 
@@ -681,7 +691,7 @@ function AquariumCart() {
                 </>
               ) : (
                 <p className="py-10 px-5 text-center text-teal-600 text-base">
-                  <span className="block text-5xl mb-4">🐠</span>
+                  <img src="/loogo.png" alt="Empty Cart" className="block w-24 h-24 mb-4 mx-auto object-contain" />
                   Your aquarium is empty. Add some beautiful fish to your
                   collection!
                 </p>
@@ -691,7 +701,7 @@ function AquariumCart() {
             {/* Orders Section */}
             <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition duration-300 mb-8">
               <h2 className="p-4 m-0 text-xl border-b border-blue-100 text-teal-700 text-center bg-gradient-to-r from-teal-100 to-emerald-100 md:text-2xl md:p-5 font-bold">
-                <span className="inline-block mr-2">📦</span>
+                <img src="/loogo.png" alt="Orders" className="inline-block mr-2 w-8 h-8 object-contain" />
                 Your Orders
               </h2>
 
@@ -767,7 +777,7 @@ function AquariumCart() {
                           <div className="mt-4 pt-3 border-t border-gray-100">
                             <p className="text-sm text-gray-600">
                               <span className="font-medium">
-                                <span className="inline-block mr-1">🏠</span>{" "}
+                                <FiHome className="inline-block mr-1 text-teal-600" />{" "}
                                 Shipping Address:
                               </span>{" "}
                               {order.address}
@@ -837,33 +847,18 @@ function AquariumCart() {
                         required
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-1">
-                          State
-                        </label>
-                        <input
-                          type="text"
-                          name="state"
-                          value={addressDetails.state}
-                          onChange={handleAddressChange}
-                          className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-1">
-                          Zip Code
-                        </label>
-                        <input
-                          type="text"
-                          name="zipCode"
-                          value={addressDetails.zipCode}
-                          onChange={handleAddressChange}
-                          className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                          required
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-medium mb-1">
+                        Zip Code
+                      </label>
+                      <input
+                        type="text"
+                        name="zipCode"
+                        value={addressDetails.zipCode}
+                        onChange={handleAddressChange}
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        required
+                      />
                     </div>
                     <div>
                       <label className="block text-gray-700 text-sm font-medium mb-1">
@@ -877,6 +872,21 @@ function AquariumCart() {
                         className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
                         required
                       />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-medium mb-1">
+                        Phone Number *
+                      </label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={addressDetails.phone}
+                        onChange={handleAddressChange}
+                        placeholder="+880 1XXXXXXXXX"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        required
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Bangladesh phone number format required</p>
                     </div>
                     <div className="flex justify-end pt-4 gap-3">
                       <button
@@ -899,15 +909,22 @@ function AquariumCart() {
               </div>
             )}
           </>
+
         ) : (
           <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition duration-300 p-8 text-center my-8">
             <p className="text-lg text-gray-600">
               Please login to view your profile.
             </p>
+            <button 
+              onClick={() => navigate('/login')}
+              className="mt-4 bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-lg transition-colors"
+            >
+              Go to Login
+            </button>
           </div>
         )}
       </div>
     </div>
   );
 }
-export default AquariumCart;
+export default Profile;

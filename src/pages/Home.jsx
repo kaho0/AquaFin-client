@@ -27,10 +27,10 @@ const Home = () => {
       try {
         const [fishResponse, plantResponse] = await Promise.all([
           fetch(
-            "https://gentle-refuge-38511-8844be05d876.herokuapp.com/api/v1/fish/getall"
+        "https://aquafin.onrender.com/api/v1/fish/getall"
           ),
           fetch(
-            "https://gentle-refuge-38511-8844be05d876.herokuapp.com/api/v1/plant/getall"
+        "https://aquafin.onrender.com/api/v1/plant/getall"
           ),
         ]);
 
@@ -396,7 +396,7 @@ const Home = () => {
       </div>
 
       {/* CSS Animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeInUp {
           from {
             opacity: 0;

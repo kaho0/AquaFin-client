@@ -400,7 +400,7 @@ const PlantList = ({ limit }) => {
     const fetchPlantDetails = async () => {
       try {
         const response = await fetch(
-          "https://gentle-refuge-38511-8844be05d876.herokuapp.com/api/v1/plant/getall"
+        "https://aquafin.onrender.com/api/v1/plant/getall"
         );
         const data = await response.json();
         if (Array.isArray(data.data)) {
@@ -443,7 +443,7 @@ const PlantList = ({ limit }) => {
       const user_id = user.uid;
 
       const response = await fetch(
-        "https://gentle-refuge-38511-8844be05d876.herokuapp.com/api/v1/cart/add",
+        "https://aquafin.onrender.com/api/v1/cart/add",
         {
           method: "POST",
           headers: {
@@ -634,9 +634,16 @@ const PlantList = ({ limit }) => {
                 <p style={styles.scientificName}>{plant.scientific_name}</p>
                 <div style={styles.price}>
                   ৳
-                  {typeof plant.price === "number"
-                    ? plant.price.toFixed(2)
-                    : "N/A"}{" "}
+                  {(() => {
+                    try {
+                      const price = plant.price;
+                      if (price === null || price === undefined) return plant.formatted_price || "N/A";
+                      const numPrice = typeof price === "number" ? price : Number(price);
+                      return isNaN(numPrice) ? (plant.formatted_price || "N/A") : numPrice.toFixed(2);
+                    } catch (error) {
+                      return plant.formatted_price || "N/A";
+                    }
+                  })()}{" "}
                   <span
                     style={{
                       fontWeight: "lighter",
@@ -644,7 +651,7 @@ const PlantList = ({ limit }) => {
                       marginRight: "1rem",
                     }}
                   >
-                    ({plant.price_unit})
+                    {/* Removed redundant unit display */}
                   </span>
                 </div>
 
@@ -742,9 +749,16 @@ const PlantList = ({ limit }) => {
                 </p>
                 <div style={styles.modalPrice}>
                   ৳
-                  {typeof selectedPlant.price === "number"
-                    ? selectedPlant.price.toFixed(2)
-                    : "N/A"}
+                  {(() => {
+                    try {
+                      const price = selectedPlant.price;
+                      if (price === null || price === undefined) return selectedPlant.formatted_price || "N/A";
+                      const numPrice = typeof price === "number" ? price : Number(price);
+                      return isNaN(numPrice) ? (selectedPlant.formatted_price || "N/A") : numPrice.toFixed(2);
+                    } catch (error) {
+                      return selectedPlant.formatted_price || "N/A";
+                    }
+                  })()}
                 </div>
                 <p>
                   <strong>Growth Rate:</strong> {selectedPlant.growth_rate}
